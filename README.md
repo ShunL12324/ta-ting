@@ -18,7 +18,24 @@
 
 ## 🚀 快速开始
 
-### 测试后端（无需前端）
+### 1. 下载模型文件
+
+模型文件较大（约 248MB），不包含在 Git 仓库中，需要单独下载：
+
+```bash
+# Windows PowerShell
+.\scripts\download-models.ps1
+
+# Linux/macOS
+./scripts/download-models.sh
+```
+
+或手动下载：
+- 访问 [Sherpa-ONNX Releases](https://github.com/k2-fsa/sherpa-onnx/releases)
+- 下载 `sherpa-onnx-zipformer-multi-zh-hans-2023-9-2.tar.bz2`
+- 解压到 `src-tauri/resources/models/sherpa-zh/`
+
+### 2. 测试后端（无需前端）
 
 ```bash
 cd src-tauri
@@ -27,7 +44,7 @@ cargo run --release --bin test_tating
 
 按 **Ctrl+Shift+V** 开始录音，再次按下停止并转录。
 
-### 完整开发模式
+### 3. 完整开发模式
 
 ```bash
 npm install
@@ -39,29 +56,31 @@ npm run tauri dev
 ## 📦 当前状态
 
 **版本**: v0.1.0-alpha
-**阶段**: Phase 1 完成 ✅
-**下一步**: 前后端集成
+**阶段**: Phase 1 完成 ✅ + 前后端集成完成 🎉
 
 ### ✅ 已完成功能
 
-**后端 (Rust)**:
-- Sherpa-ONNX 语音识别引擎
+**核心功能**:
+- Sherpa-ONNX 离线转录（ZipFormer 中文模型）
 - 全局热键 (Ctrl+Shift+V)
-- 音频录制 (cpal)
-- 键盘输入模拟 (enigo + arboard)
-- 状态机管理
-- 系统托盘
+- 实时音频录制和波形显示
+- 自动标点符号恢复
+- 键盘输入模拟和自动粘贴
+- 系统托盘集成
 
-**前端 (React)**:
-- 录音指示器 UI
-- 设置面板
-- Zustand 状态管理
+**前后端集成**:
+- Tauri Commands（get_current_state, trigger_hotkey）
+- 事件系统（state_changed, transcription_result, error）
+- 录音指示器窗口（实时波形动画）
+- 设置面板 UI
 
 ### ⏳ 待完成
 
-- [ ] Tauri Commands（前后端通信）
-- [ ] 状态同步
-- [ ] 完整流程集成测试
+- [ ] 实时波形优化
+- [ ] 转录进度条
+- [ ] 多模型支持
+- [ ] 自定义热键
+- [ ] 设置持久化
 
 ---
 
