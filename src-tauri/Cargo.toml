@@ -1,0 +1,98 @@
+[package]
+name = "ta-ting"
+version = "0.1.0"
+description = "TaTing - AI 离线听写输入法"
+authors = ["TaTing Team"]
+license = "MIT"
+repository = ""
+edition = "2021"
+rust-version = "1.77.2"
+default-run = "ta-ting"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "ta_ting_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+# 主应用程序二进制文件
+[[bin]]
+name = "ta-ting"
+path = "src/main.rs"
+
+# 测试二进制文件
+[[bin]]
+name = "test_tating"
+path = "src/bin/test_tating.rs"
+
+# test_punctuation 待 ONNX 模型启用后使用
+# [[bin]]
+# name = "test_punctuation"
+# path = "src/bin/test_punctuation.rs"
+
+[[bin]]
+name = "compare_punctuation"
+path = "src/bin/compare_punctuation.rs"
+
+# 以下测试程序暂时禁用（引用了已删除的模块）
+# [[bin]]
+# name = "test_hotkey"
+# path = "src/bin/test_hotkey.rs"
+#
+# [[bin]]
+# name = "test_audio"
+# path = "src/bin/test_audio.rs"
+#
+# [[bin]]
+# name = "test_input"
+# path = "src/bin/test_input.rs"
+
+[build-dependencies]
+tauri-build = { version = "2.5.3", features = [] }
+
+[dependencies]
+# Tauri 核心
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.9.5", features = ["tray-icon"] }
+tauri-plugin-log = "2"
+
+# 音频处理
+cpal = "0.15"
+hound = "3.5"
+
+# 全局热键
+global-hotkey = "0.5"
+
+# Sherpa-ONNX 集成 (替代 Whisper，快 5-10 倍)
+sherpa-rs = { version = "0.6", default-features = false, features = ["download-binaries"] }
+
+# 标点恢复 (ONNX Runtime) - 待 ort 2.0 正式版发布后启用
+# 当前使用基于规则的轻量级实现（零依赖）
+# ort = { version = "2.0.0-rc.11", features = ["download-binaries"] }
+# tokenizers = "0.20"
+# ndarray = "0.16"
+
+# 系统集成
+arboard = "3.3"  # 剪贴板
+enigo = "0.2"    # 键盘模拟
+
+# 异步运行时
+tokio = { version = "1", features = ["full"] }
+
+# 错误处理
+anyhow = "1.0"
+thiserror = "1.0"
+
+# 日志
+env_logger = "0.11"
+
+# Windows 平台特定
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Foundation",
+    "Win32_Graphics_Gdi",
+    "Win32_Graphics_Dwm",
+] }

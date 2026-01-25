@@ -1,0 +1,97 @@
+/// 标点恢复功能测试程序
+///
+/// 使用方法:
+///   cargo run --bin test_punctuation
+///
+/// 前提条件:
+///   1. 运行 Python 脚本下载模型:
+///      python download_punctuation_model.py
+///   2. 确保模型文件存在于: resources/models/punctuation/
+
+use anyhow::Result;
+use ta_ting_lib::punctuation::PunctuationProcessor;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    // 初始化日志
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug")).init();
+
+    println!("========================================");
+    println!("  标点恢复功能测试");
+    println!("========================================\n");
+
+    // 模型路径
+    let model_dir = "resources/models/punctuation";
+
+    // 检查模型是否存在
+    let model_path = std::path::Path::new(model_dir).join("model.onnx");
+    if !model_path.exists() {
+        eprintln!("❌ 错误: 模型文件不存在: {:?}", model_path);
+        eprintln!("\n请先运行以下命令下载模型:");
+        eprintln!("  python download_punctuation_model.py");
+        return Ok(());
+    }
+
+    // 创建处理器
+    println!("📦 加载标点恢复模型...");
+    let processor = PunctuationProcessor::new();
+
+    // 初始化模型
+    match processor.initialize(model_dir).await {
+        Ok(_) => println!("✅ 模型加载成功!\n"),
+        Err(e) => {
+            eprintln!("❌ 模型加载失败: {}", e);
+            return Err(e);
+        }
+    }
+
+    // 测试用例
+    let test_cases = vec![
+        "今天天气真好我们去公园玩吧",
+        "你好吗我很好谢谢你呢",
+        "这是一个测试我不知道会发生什么",
+        "明天要下雨吗我想去爬山",
+        "你喜欢吃什么我喜欢吃火锅",
+    ];
+
+    println!("🧪 开始测试...\n");
+    println!("========================================");
+
+    for (i, text) in test_cases.iter().enumerate() {
+        println!("\n测试 {}: ", i + 1);
+        println!("输入: {}", text);
+
+        match processor.process(text).await {
+            Ok(result) => {
+                println!("输出: {}", result);
+                println!("✅ 成功");
+            }
+            Err(e) => {
+                eprintln!("❌ 失败: {}", e);
+            }
+        }
+
+        println!("----------------------------------------");
+    }
+
+    println!("\n🎉 测试完成!");
+
+    // 性能测试
+    println!("\n⚡ 性能测试...");
+    let long_text = "今天天气真好我们去公园玩吧你觉得怎么样我觉得很不错我们可以带点零食和水一起去野餐";
+
+    let start = std::time::Instant::now();
+    let result = processor.process(long_text).await?;
+    let elapsed = start.elapsed();
+
+    println!("输入: {} ({} 字符)", long_text, long_text.chars().count());
+    println!("输出: {}", result);
+    println!("耗时: {:.2}ms", elapsed.as_secs_f64() * 1000.0);
+
+    // 卸载模型
+    println!("\n🗑️  卸载模型...");
+    processor.unload().await;
+    println!("✅ 完成!");
+
+    Ok(())
+}
