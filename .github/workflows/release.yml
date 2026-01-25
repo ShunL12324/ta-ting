@@ -1,0 +1,102 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'windows-latest'
+            args: ''
+          - platform: 'macos-latest'
+            args: '--target universal-apple-darwin'
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Download Sherpa-ONNX models (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          Write-Host "Downloading Sherpa-ONNX models..."
+          if (Test-Path scripts/download-models.ps1) {
+            & scripts/download-models.ps1
+          } else {
+            Write-Host "Download script not found, skipping model download"
+          }
+
+      - name: Download Sherpa-ONNX models (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: |
+          echo "Downloading Sherpa-ONNX models..."
+          if [ -f scripts/download-models.sh ]; then
+            chmod +x scripts/download-models.sh
+            ./scripts/download-models.sh
+          else
+            echo "Download script not found, skipping model download"
+          fi
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'TaTing ${{ github.ref_name }}'
+          releaseBody: |
+            ## TaTing ${{ github.ref_name }}
+
+            ### 📥 下载
+
+            - **Windows**: 下载 `.msi` 安装包
+            - **macOS**: 下载 `.dmg` 安装包
+
+            ### ⚠️ 重要提示
+
+            **模型文件不包含在安装包中**，首次安装后需要下载模型：
+
+            1. 安装应用
+            2. 运行模型下载脚本（详见 README.md）
+            3. 或手动下载模型文件
+
+            ### 📝 更新日志
+
+            详见项目 CHANGELOG.md
+
+            ### 🔐 自动更新
+
+            从此版本开始，应用支持自动更新功能。
+            点击托盘菜单"检查更新"即可检查并安装新版本。
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}

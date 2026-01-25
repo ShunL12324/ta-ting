@@ -18,11 +18,14 @@ pub fn create_tray<R: Runtime>(app: &AppHandle<R>) -> Result<()> {
     let start_item = MenuItemBuilder::with_id("start_dictation", "开始听写 (Ctrl+Shift+D)")
         .build(app)?;
     let settings_item = MenuItemBuilder::with_id("settings", "设置").build(app)?;
+    let check_update_item = MenuItemBuilder::with_id("check_update", "检查更新").build(app)?;
     let quit_item = MenuItemBuilder::with_id("quit", "退出").build(app)?;
 
     let menu = MenuBuilder::new(app)
         .item(&start_item)
         .item(&settings_item)
+        .separator()
+        .item(&check_update_item)
         .separator()
         .item(&quit_item)
         .build()?;
@@ -75,6 +78,13 @@ fn handle_menu_event<R: tauri::Runtime>(app: &AppHandle<R>, event_id: &str) {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
                 let _ = window.set_focus();
+            }
+        }
+        "check_update" => {
+            info!("检查更新");
+            // 发送检查更新事件到前端
+            if let Err(e) = app.emit("check_update_requested", ()) {
+                log::error!("发送检查更新事件失败: {}", e);
             }
         }
         "quit" => {

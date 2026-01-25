@@ -39,5 +39,9 @@ src-tauri/resources/models/*.bin
 nul
 *.tmp
 
+# Tauri signing keys (NEVER commit these!)
+.tauri/*.key
+.tauri/*.key.pub
+
 # OS
 Thumbs.db

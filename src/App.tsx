@@ -1,5 +1,6 @@
 import { RecordingIndicator } from "./components/RecordingIndicator";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { UpdateChecker } from "./components/UpdateChecker";
 import { useAppStore } from "./stores/appStore";
 
 function App() {
@@ -46,6 +47,7 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-8">
       <RecordingIndicator isRecording={isRecording} />
       <SettingsPanel />
+      <UpdateChecker />
 
       <div className="text-center space-y-12 max-w-2xl w-full">
         {/* 标题区域 */}

@@ -41,6 +41,18 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": []
+    "resources": [],
+    "publisher": "TaTing Team",
+    "homepage": "https://github.com/ShunL12324/ta-ting"
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://github.com/ShunL12324/ta-ting/releases/latest/download/latest.json"
+      ],
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDg1QTc5QTc0NzEzOEZDNzEKUldSeC9EaHhkSnFuaFRSeHI1ZkUzdk5ZSU9ieFhSb0Nxb2Z3a0ZQTGN4cFhpb1d3K2pXUXd3TXAK"
+    }
   }
 }

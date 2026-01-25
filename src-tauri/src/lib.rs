@@ -40,6 +40,34 @@ fn trigger_hotkey(state: State<AppState>, app_handle: AppHandle) -> Result<(), S
         .map_err(|e| e.to_string())
 }
 
+/// 检查更新
+#[tauri::command]
+async fn check_for_updates(app: AppHandle) -> Result<String, String> {
+    use tauri_plugin_updater::UpdaterExt;
+
+    info!("开始检查更新...");
+
+    let updater = app.updater_builder().build().map_err(|e| {
+        error!("创建更新器失败: {}", e);
+        format!("创建更新器失败: {}", e)
+    })?;
+
+    match updater.check().await {
+        Ok(Some(update)) => {
+            info!("发现新版本: {}", update.version);
+            Ok(format!("发现新版本: {}，点击更新按钮下载", update.version))
+        }
+        Ok(None) => {
+            info!("已是最新版本");
+            Ok("已是最新版本".to_string())
+        }
+        Err(e) => {
+            error!("检查更新失败: {}", e);
+            Err(format!("检查更新失败: {}", e))
+        }
+    }
+}
+
 // ==================== 录音窗口管理 ====================
 
 use tauri::{WebviewUrl, WebviewWindowBuilder, WebviewWindow};
@@ -189,7 +217,10 @@ pub fn run() {
             // 5. 创建系统托盘
             system::tray::create_tray(app.handle())?;
 
-            // 6. 将应用状态注册到 Tauri State 管理
+            // 6. 配置自动更新插件
+            app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+
+            // 7. 将应用状态注册到 Tauri State 管理
             app.manage(AppState { app: app_state });
 
             info!("🎉 应用初始化完成");
@@ -198,6 +229,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_current_state,
             trigger_hotkey,
+            check_for_updates,
         ])
         .run(tauri::generate_context!())
         .expect("运行 Tauri 应用时出错");
