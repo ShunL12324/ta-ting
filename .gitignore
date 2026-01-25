@@ -42,6 +42,7 @@ nul
 # Tauri signing keys (NEVER commit these!)
 .tauri/*.key
 .tauri/*.key.pub
+backup/
 
 # OS
 Thumbs.db
