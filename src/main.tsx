@@ -10,6 +10,9 @@ import { useAppStore } from "./stores/appStore";
 async function setupEventListeners() {
   console.log("设置后端事件监听器...");
 
+  // Load persisted settings
+  await useAppStore.getState().loadSettings();
+
   // 监听状态变化事件
   await listen<string>("state_changed", (event) => {
     const state = event.payload as "idle" | "recording" | "transcribing" | "inputting";

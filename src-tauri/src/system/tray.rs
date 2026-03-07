@@ -11,11 +11,14 @@ use tauri::{
 };
 
 /// 创建系统托盘
-pub fn create_tray<R: Runtime>(app: &AppHandle<R>) -> Result<()> {
+///
+/// `hotkey_display`: human-readable hotkey label, e.g. "Ctrl+Shift+V"
+pub fn create_tray<R: Runtime>(app: &AppHandle<R>, hotkey_display: &str) -> Result<()> {
     info!("创建系统托盘...");
 
     // 创建托盘菜单
-    let start_item = MenuItemBuilder::with_id("start_dictation", "开始听写 (Ctrl+Shift+V)")
+    let start_label = format!("开始听写 ({})", hotkey_display);
+    let start_item = MenuItemBuilder::with_id("start_dictation", &start_label)
         .build(app)?;
     let settings_item = MenuItemBuilder::with_id("settings", "设置").build(app)?;
     let check_update_item = MenuItemBuilder::with_id("check_update", "检查更新").build(app)?;

@@ -6,6 +6,7 @@ pub mod system;
 pub mod asr;
 pub mod punctuation;
 
+use config::settings::AppSettings;
 use core::app::{AppConfig, TaTingApp};
 use global_hotkey::GlobalHotKeyEvent;
 use log::{error, info};
@@ -14,21 +15,27 @@ use tauri::{AppHandle, Manager, State};
 
 // ==================== 全局状态 ====================
 
-/// 全局应用状态包装器
 pub struct AppState {
     pub app: Arc<Mutex<TaTingApp>>,
 }
 
+// ==================== Settings helpers ====================
+
+fn settings_path(app: &AppHandle) -> std::path::PathBuf {
+    app.path()
+        .app_local_data_dir()
+        .unwrap_or_else(|_| std::path::PathBuf::from("."))
+        .join("settings.json")
+}
+
 // ==================== Tauri Commands ====================
 
-/// 获取当前状态（字符串格式，方便 TypeScript 使用）
 #[tauri::command]
 fn get_current_state(state: State<AppState>) -> String {
     let app = state.app.lock().unwrap();
     format!("{}", app.current_state())
 }
 
-/// 手动触发热键（用于托盘菜单或测试）
 #[tauri::command]
 fn trigger_hotkey(state: State<AppState>, app_handle: AppHandle) -> Result<(), String> {
     info!("收到手动触发热键命令");
@@ -37,7 +44,34 @@ fn trigger_hotkey(state: State<AppState>, app_handle: AppHandle) -> Result<(), S
         .map_err(|e| e.to_string())
 }
 
-/// 检查更新
+#[tauri::command]
+fn get_settings(app: AppHandle) -> Result<AppSettings, String> {
+    AppSettings::load_from_file(&settings_path(&app)).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn set_hotkey(hotkey: String, app: AppHandle) -> Result<(), String> {
+    // 1. Parse + register
+    let manager = HOTKEY_MANAGER
+        .get()
+        .ok_or("HotkeyManager not initialized")?;
+    manager
+        .lock()
+        .unwrap()
+        .register_str(&hotkey)
+        .map_err(|e| e.to_string())?;
+
+    info!("热键已更新: {}", hotkey);
+
+    // 2. Persist
+    let path = settings_path(&app);
+    let mut settings = AppSettings::load_from_file(&path).unwrap_or_default();
+    settings.hotkey = hotkey;
+    settings.save_to_file(&path).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 #[tauri::command]
 async fn check_for_updates(app: AppHandle) -> Result<String, String> {
     use tauri_plugin_updater::UpdaterExt;
@@ -67,20 +101,18 @@ async fn check_for_updates(app: AppHandle) -> Result<String, String> {
 
 // ==================== 录音窗口管理 ====================
 
-use tauri::{WebviewUrl, WebviewWindowBuilder, WebviewWindow};
+use tauri::{WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
-/// 创建录音窗口
-pub fn create_recording_window<R: tauri::Runtime>(app_handle: &AppHandle<R>) -> Result<WebviewWindow<R>, String> {
+pub fn create_recording_window<R: tauri::Runtime>(
+    app_handle: &AppHandle<R>,
+) -> Result<WebviewWindow<R>, String> {
     info!("创建录音窗口");
 
-    // 先计算位置 - 稍大的窗口（留边距给圆角抗锯齿）
     let (x, y) = if let Ok(Some(monitor)) = app_handle.primary_monitor() {
         let screen = monitor.size();
-        let window_width = 400;  // 比实际内容大20px
-        let window_height = 90;  // 比实际内容大20px
-
+        let window_width = 400;
+        let window_height = 90;
         let x = (screen.width as i32 - window_width) / 2;
-        // 放在屏幕垂直方向的 70% 位置（中下方）
         let y = (screen.height as f32 * 0.7) as i32;
         (x as f64, y as f64)
     } else {
@@ -93,7 +125,7 @@ pub fn create_recording_window<R: tauri::Runtime>(app_handle: &AppHandle<R>) -> 
         WebviewUrl::App("recording.html".into()),
     )
     .title("录音中")
-    .inner_size(400.0, 90.0)  // 留边距
+    .inner_size(400.0, 90.0)
     .position(x, y)
     .decorations(false)
     .always_on_top(true)
@@ -104,13 +136,9 @@ pub fn create_recording_window<R: tauri::Runtime>(app_handle: &AppHandle<R>) -> 
     .build()
     .map_err(|e| e.to_string())?;
 
-    // 不使用 Windows 圆角处理，让浏览器 CSS 处理
-    // 这样可以获得浏览器原生的抗锯齿效果
-
     Ok(window)
 }
 
-/// 关闭录音窗口
 pub fn close_recording_window<R: tauri::Runtime>(app_handle: &AppHandle<R>) {
     if let Some(window) = app_handle.get_webview_window("recording") {
         info!("关闭录音窗口");
@@ -122,16 +150,18 @@ pub fn close_recording_window<R: tauri::Runtime>(app_handle: &AppHandle<R>) {
 
 static HOTKEY_MANAGER: OnceLock<std::sync::Mutex<system::HotkeyManager>> = OnceLock::new();
 
-/// 注册全局热键并监听事件
-fn setup_global_hotkey(app_handle: AppHandle, app_state: Arc<Mutex<TaTingApp>>) -> anyhow::Result<()> {
-    info!("注册全局热键 Ctrl+Shift+V...");
+fn setup_global_hotkey(
+    hotkey_str: &str,
+    app_handle: AppHandle,
+    app_state: Arc<Mutex<TaTingApp>>,
+) -> anyhow::Result<()> {
+    info!("注册全局热键 {}...", hotkey_str);
 
     let mut manager = system::HotkeyManager::new()?;
-    manager.register_default()?;
+    manager.register_str(hotkey_str)?;
     HOTKEY_MANAGER.get_or_init(|| std::sync::Mutex::new(manager));
-    info!("✅ 全局热键 Ctrl+Shift+V 注册成功");
+    info!("✅ 全局热键 {} 注册成功", hotkey_str);
 
-    // Listen for hotkey events in a background thread
     std::thread::spawn(move || {
         info!("热键监听线程已启动");
         let receiver = GlobalHotKeyEvent::receiver();
@@ -166,7 +196,6 @@ fn setup_global_hotkey(app_handle: AppHandle, app_state: Arc<Mutex<TaTingApp>>) 
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
-            // 配置日志插件（在 debug 和 release 都启用）
             app.handle().plugin(
                 tauri_plugin_log::Builder::default()
                     .level(log::LevelFilter::Info)
@@ -175,11 +204,14 @@ pub fn run() {
 
             info!("TaTing 启动中...");
 
-            // 1. 创建 TaTing 应用实例
-            info!("初始化 TaTing 应用实例...");
+            // 1. Load persisted settings
+            let settings_file = settings_path(app.handle());
+            let settings = AppSettings::load_from_file(&settings_file).unwrap_or_default();
+            info!("已加载设置: 热键={}", settings.hotkey);
 
-            // 通过 Tauri 资源 API 解析模型路径（支持打包后的路径）
-            let model_path = app.path()
+            // 2. Init TaTing app
+            let model_path = app
+                .path()
                 .resolve(
                     "resources/models/sherpa-zh/sherpa-onnx-zipformer-multi-zh-hans-2023-9-2",
                     tauri::path::BaseDirectory::Resource,
@@ -188,7 +220,8 @@ pub fn run() {
                 .to_string_lossy()
                 .into_owned();
 
-            let punct_model_path = app.path()
+            let punct_model_path = app
+                .path()
                 .resolve(
                     "resources/models/sherpa-punct/sherpa-onnx-punct-ct-transformer-zh-en-vocab272727-2024-04-12/model.onnx",
                     tauri::path::BaseDirectory::Resource,
@@ -201,28 +234,28 @@ pub fn run() {
                 punct_model_path,
                 ..AppConfig::default()
             };
-            let tating_app = TaTingApp::new(config)
-                .map_err(|e| format!("创建应用失败: {}", e))?;
+            let tating_app =
+                TaTingApp::new(config).map_err(|e| format!("创建应用失败: {}", e))?;
 
-            // 2. 初始化所有组件（Sherpa、录音器、输入模拟器）
             tating_app
                 .initialize()
                 .map_err(|e| format!("初始化组件失败: {}", e))?;
 
-            // 3. 包装成 Arc<Mutex> 用于跨线程共享
             let app_state = Arc::new(Mutex::new(tating_app));
 
-            // 4. 注册全局热键
-            setup_global_hotkey(app.handle().clone(), Arc::clone(&app_state))
+            // 3. Register hotkey from settings
+            setup_global_hotkey(&settings.hotkey, app.handle().clone(), Arc::clone(&app_state))
                 .map_err(|e| format!("注册全局热键失败: {}", e))?;
 
-            // 5. 创建系统托盘
-            system::tray::create_tray(app.handle())?;
+            // 4. Create tray with hotkey display label
+            let display = system::hotkey::hotkey_to_display(&settings.hotkey);
+            system::tray::create_tray(app.handle(), &display)?;
 
-            // 6. 配置自动更新插件
-            app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+            // 5. Auto-update plugin
+            app.handle()
+                .plugin(tauri_plugin_updater::Builder::new().build())?;
 
-            // 7. 将应用状态注册到 Tauri State 管理
+            // 6. Register app state
             app.manage(AppState { app: app_state });
 
             info!("🎉 应用初始化完成");
@@ -231,6 +264,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_current_state,
             trigger_hotkey,
+            get_settings,
+            set_hotkey,
             check_for_updates,
         ])
         .run(tauri::generate_context!())
