@@ -10,7 +10,7 @@ function App() {
     switch (state) {
       case 'idle':
         return {
-          text: '按 Ctrl+Shift+D 开始听写',
+          text: '按 Ctrl+Shift+V 开始听写',
           emoji: '🎙️',
           color: 'text-gray-700'
         };
@@ -83,7 +83,7 @@ function App() {
             </kbd>
             <span className="text-gray-400">+</span>
             <kbd className="px-2 py-1 bg-gray-100 text-gray-700 rounded font-mono text-sm font-semibold">
-              D
+              V
             </kbd>
           </div>
 

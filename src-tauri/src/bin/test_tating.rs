@@ -78,7 +78,7 @@ fn main() {
             // 检查热键事件（非阻塞）
             if let Ok(_event) = receiver.try_recv() {
                 println!("\n🎯 热键触发！");
-                if let Err(e) = app.handle_hotkey() {
+                if let Err(e) = app.handle_hotkey(None) {
                     eprintln!("❌ 处理热键失败: {}", e);
                 }
             }
@@ -91,7 +91,7 @@ fn main() {
     loop {
         if let Ok(_event) = receiver.recv() {
             println!("\n🎯 热键触发！");
-            if let Err(e) = app.handle_hotkey() {
+            if let Err(e) = app.handle_hotkey(None) {
                 eprintln!("❌ 处理热键失败: {}", e);
             }
         }

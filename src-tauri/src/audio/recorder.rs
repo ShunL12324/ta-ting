@@ -191,7 +191,7 @@ impl AudioRecorder {
         let stream = self.device.build_input_stream(
             &config,
             move |data: &[f32], _: &cpal::InputCallbackInfo| {
-                log::info!("🎵 音频流回调触发: {} 采样点", data.len());
+                log::debug!("🎵 音频流回调触发: {} 采样点", data.len());
 
                 let mut buffer = buffer.lock().unwrap();
                 // 如果是多声道，转换为单声道（取平均值）
@@ -199,13 +199,13 @@ impl AudioRecorder {
                     buffer.extend_from_slice(data);
                     // 调用回调函数
                     if let Some(ref callback) = audio_callback {
-                        log::info!("准备调用回调 (单声道)");
+                        log::debug!("准备调用回调 (单声道)");
                         if let Ok(mut cb) = callback.lock() {
-                            log::info!("回调锁获取成功，调用中...");
+                            log::debug!("回调锁获取成功，调用中...");
                             cb(data);
                         }
                     } else {
-                        log::warn!("回调为 None");
+                        log::debug!("回调为 None");
                     }
                 } else {
                     let mut mono_chunk = Vec::with_capacity(data.len() / channels);
@@ -216,13 +216,13 @@ impl AudioRecorder {
                     }
                     // 调用回调函数
                     if let Some(ref callback) = audio_callback {
-                        log::info!("准备调用回调 (多声道, {} 采样点)", mono_chunk.len());
+                        log::debug!("准备调用回调 (多声道, {} 采样点)", mono_chunk.len());
                         if let Ok(mut cb) = callback.lock() {
-                            log::info!("回调锁获取成功，调用中...");
+                            log::debug!("回调锁获取成功，调用中...");
                             cb(&mono_chunk);
                         }
                     } else {
-                        log::warn!("回调为 None");
+                        log::debug!("回调为 None");
                     }
                 }
             },

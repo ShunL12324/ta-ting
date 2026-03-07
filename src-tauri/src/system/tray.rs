@@ -15,7 +15,7 @@ pub fn create_tray<R: Runtime>(app: &AppHandle<R>) -> Result<()> {
     info!("创建系统托盘...");
 
     // 创建托盘菜单
-    let start_item = MenuItemBuilder::with_id("start_dictation", "开始听写 (Ctrl+Shift+D)")
+    let start_item = MenuItemBuilder::with_id("start_dictation", "开始听写 (Ctrl+Shift+V)")
         .build(app)?;
     let settings_item = MenuItemBuilder::with_id("settings", "设置").build(app)?;
     let check_update_item = MenuItemBuilder::with_id("check_update", "检查更新").build(app)?;

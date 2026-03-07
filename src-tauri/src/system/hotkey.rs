@@ -36,8 +36,6 @@ use global_hotkey::{
     GlobalHotKeyEvent, GlobalHotKeyManager,
 };
 use log::{debug, info, warn};
-use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
-use std::time::Duration;
 
 /// 热键事件类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -153,67 +151,6 @@ impl HotkeyManager {
             }
             Err(_) => None,
         }
-    }
-
-    /// 阻塞等待热键事件（带超时）
-    ///
-    /// # 参数
-    /// - `timeout`: 超时时间
-    ///
-    /// # 返回
-    /// - `Ok(HotkeyEvent)`: 收到热键事件
-    /// - `Err(RecvTimeoutError)`: 超时或通道断开
-    pub fn wait_event(&self, timeout: Duration) -> Result<HotkeyEvent, RecvTimeoutError> {
-        let global_receiver = GlobalHotKeyEvent::receiver();
-        let hotkey_id = self.hotkey.as_ref().map(|h| h.id());
-
-        loop {
-            match global_receiver.recv_timeout(timeout) {
-                Ok(event) => {
-                    // 检查是否是我们注册的热键
-                    if Some(event.id) != hotkey_id {
-                        continue; // 不是我们的热键，继续等待
-                    }
-
-                    match event.state {
-                        global_hotkey::HotKeyState::Pressed => {
-                            debug!("Hotkey PRESSED");
-                            return Ok(HotkeyEvent::Pressed);
-                        }
-                        global_hotkey::HotKeyState::Released => {
-                            debug!("Hotkey RELEASED");
-                            return Ok(HotkeyEvent::Released);
-                        }
-                    }
-                }
-                Err(_) => return Err(RecvTimeoutError::Timeout),
-            }
-        }
-    }
-
-    /// 创建一个带有通道的热键管理器
-    ///
-    /// 返回管理器和一个接收器，管理器会将热键事件发送到接收器
-    ///
-    /// # 用法
-    /// ```rust,no_run
-    /// let (mut manager, receiver) = HotkeyManager::with_channel().unwrap();
-    /// manager.register_default().unwrap();
-    ///
-    /// // 在另一个线程或任务中接收事件
-    /// loop {
-    ///     match receiver.recv_timeout(Duration::from_millis(100)) {
-    ///         Ok(event) => println!("{:?}", event),
-    ///         Err(_) => continue,
-    ///     }
-    /// }
-    /// ```
-    pub fn with_channel() -> Result<(Self, Receiver<HotkeyEvent>)> {
-        let manager = Self::new()?;
-        let (_tx, rx) = mpsc::channel();
-
-        // 注意：这里不会自动转发事件，需要手动调用 forward_to_channel
-        Ok((manager, rx))
     }
 }
 

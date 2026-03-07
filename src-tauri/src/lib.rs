@@ -12,7 +12,7 @@ use global_hotkey::{
     GlobalHotKeyEvent, GlobalHotKeyManager,
 };
 use log::{error, info};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use tauri::{AppHandle, Manager, State};
 
 // ==================== 全局状态 ====================
@@ -36,7 +36,7 @@ fn get_current_state(state: State<AppState>) -> String {
 fn trigger_hotkey(state: State<AppState>, app_handle: AppHandle) -> Result<(), String> {
     info!("收到手动触发热键命令");
     let app = state.app.lock().unwrap();
-    app.handle_hotkey_with_events(&app_handle)
+    app.handle_hotkey(Some(app_handle))
         .map_err(|e| e.to_string())
 }
 
@@ -123,27 +123,27 @@ pub fn close_recording_window<R: tauri::Runtime>(app_handle: &AppHandle<R>) {
 
 // ==================== 全局热键管理 ====================
 
+static HOTKEY_MANAGER: OnceLock<GlobalHotKeyManager> = OnceLock::new();
+
 /// 注册全局热键并监听事件
 fn setup_global_hotkey(app_handle: AppHandle, app_state: Arc<Mutex<TaTingApp>>) -> anyhow::Result<()> {
-    info!("注册全局热键 Ctrl+Shift+D...");
+    info!("注册全局热键 Ctrl+Shift+V...");
 
     // 创建热键管理器
     let hotkey_manager = GlobalHotKeyManager::new()
         .map_err(|e| anyhow::anyhow!("创建热键管理器失败: {}", e))?;
 
-    // 定义热键：Ctrl+Shift+D (D for Dictation)
-    let hotkey = HotKey::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyD);
+    // 定义热键：Ctrl+Shift+V
+    let hotkey = HotKey::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyV);
 
     // 注册热键
     hotkey_manager
         .register(hotkey)
         .map_err(|e| anyhow::anyhow!("注册热键失败: {}", e))?;
 
-    info!("✅ 全局热键 Ctrl+Shift+D 注册成功");
-
-    // 🔥 关键修复：防止 hotkey_manager 被 drop，否则热键会失效！
-    std::mem::forget(hotkey_manager);
-    info!("✅ 热键管理器已固定在内存中");
+    // 保持 hotkey_manager 存活（否则热键会失效）
+    HOTKEY_MANAGER.get_or_init(|| hotkey_manager);
+    info!("✅ 全局热键 Ctrl+Shift+V 注册成功");
 
     // 在独立线程中监听热键事件
     std::thread::spawn(move || {
@@ -158,7 +158,7 @@ fn setup_global_hotkey(app_handle: AppHandle, app_state: Arc<Mutex<TaTingApp>>) 
 
                     // 触发应用的热键处理逻辑
                     let app_lock = app_state.lock().unwrap();
-                    if let Err(e) = app_lock.handle_hotkey_with_events(&app_handle) {
+                    if let Err(e) = app_lock.handle_hotkey(Some(app_handle.clone())) {
                         error!("处理热键事件失败: {}", e);
                     }
                 }
@@ -198,7 +198,21 @@ pub fn run() {
 
             // 1. 创建 TaTing 应用实例
             info!("初始化 TaTing 应用实例...");
-            let config = AppConfig::default();
+
+            // 通过 Tauri 资源 API 解析模型路径（支持打包后的路径）
+            let model_path = app.path()
+                .resolve(
+                    "resources/models/sherpa-zh/sherpa-onnx-zipformer-multi-zh-hans-2023-9-2",
+                    tauri::path::BaseDirectory::Resource,
+                )
+                .map_err(|e| format!("无法解析模型路径: {}", e))?
+                .to_string_lossy()
+                .into_owned();
+
+            let config = AppConfig {
+                model_path,
+                ..AppConfig::default()
+            };
             let tating_app = TaTingApp::new(config)
                 .map_err(|e| format!("创建应用失败: {}", e))?;
 

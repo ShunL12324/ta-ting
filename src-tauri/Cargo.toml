@@ -25,27 +25,9 @@ path = "src/main.rs"
 name = "test_tating"
 path = "src/bin/test_tating.rs"
 
-# test_punctuation 待 ONNX 模型启用后使用
-# [[bin]]
-# name = "test_punctuation"
-# path = "src/bin/test_punctuation.rs"
-
 [[bin]]
 name = "compare_punctuation"
 path = "src/bin/compare_punctuation.rs"
-
-# 以下测试程序暂时禁用（引用了已删除的模块）
-# [[bin]]
-# name = "test_hotkey"
-# path = "src/bin/test_hotkey.rs"
-#
-# [[bin]]
-# name = "test_audio"
-# path = "src/bin/test_audio.rs"
-#
-# [[bin]]
-# name = "test_input"
-# path = "src/bin/test_input.rs"
 
 [build-dependencies]
 tauri-build = { version = "2.5.3", features = [] }
