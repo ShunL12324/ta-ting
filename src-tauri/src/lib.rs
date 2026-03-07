@@ -7,10 +7,7 @@ pub mod asr;
 pub mod punctuation;
 
 use core::app::{AppConfig, TaTingApp};
-use global_hotkey::{
-    hotkey::{Code, HotKey, Modifiers},
-    GlobalHotKeyEvent, GlobalHotKeyManager,
-};
+use global_hotkey::GlobalHotKeyEvent;
 use log::{error, info};
 use std::sync::{Arc, Mutex, OnceLock};
 use tauri::{AppHandle, Manager, State};
@@ -123,55 +120,37 @@ pub fn close_recording_window<R: tauri::Runtime>(app_handle: &AppHandle<R>) {
 
 // ==================== 全局热键管理 ====================
 
-static HOTKEY_MANAGER: OnceLock<GlobalHotKeyManager> = OnceLock::new();
+static HOTKEY_MANAGER: OnceLock<std::sync::Mutex<system::HotkeyManager>> = OnceLock::new();
 
 /// 注册全局热键并监听事件
 fn setup_global_hotkey(app_handle: AppHandle, app_state: Arc<Mutex<TaTingApp>>) -> anyhow::Result<()> {
     info!("注册全局热键 Ctrl+Shift+V...");
 
-    // 创建热键管理器
-    let hotkey_manager = GlobalHotKeyManager::new()
-        .map_err(|e| anyhow::anyhow!("创建热键管理器失败: {}", e))?;
-
-    // 定义热键：Ctrl+Shift+V
-    let hotkey = HotKey::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyV);
-
-    // 注册热键
-    hotkey_manager
-        .register(hotkey)
-        .map_err(|e| anyhow::anyhow!("注册热键失败: {}", e))?;
-
-    // 保持 hotkey_manager 存活（否则热键会失效）
-    HOTKEY_MANAGER.get_or_init(|| hotkey_manager);
+    let mut manager = system::HotkeyManager::new()?;
+    manager.register_default()?;
+    HOTKEY_MANAGER.get_or_init(|| std::sync::Mutex::new(manager));
     info!("✅ 全局热键 Ctrl+Shift+V 注册成功");
 
-    // 在独立线程中监听热键事件
+    // Listen for hotkey events in a background thread
     std::thread::spawn(move || {
         info!("热键监听线程已启动");
         let receiver = GlobalHotKeyEvent::receiver();
-        info!("热键事件接收器已创建");
 
         loop {
             match receiver.try_recv() {
                 Ok(event) => {
                     info!("🔥 检测到全局热键事件: {:?}", event);
-
-                    // 触发应用的热键处理逻辑
                     let app_lock = app_state.lock().unwrap();
                     if let Err(e) = app_lock.handle_hotkey(Some(app_handle.clone())) {
                         error!("处理热键事件失败: {}", e);
                     }
                 }
-                Err(e) if e.is_empty() => {
-                    // 没有事件，继续等待
-                }
+                Err(e) if e.is_empty() => {}
                 Err(e) => {
                     error!("热键接收器错误: {:?}", e);
                     break;
                 }
             }
-
-            // 避免 CPU 占用过高
             std::thread::sleep(std::time::Duration::from_millis(50));
         }
 
@@ -209,8 +188,17 @@ pub fn run() {
                 .to_string_lossy()
                 .into_owned();
 
+            let punct_model_path = app.path()
+                .resolve(
+                    "resources/models/sherpa-punct/sherpa-onnx-punct-ct-transformer-zh-en-vocab272727-2024-04-12/model.onnx",
+                    tauri::path::BaseDirectory::Resource,
+                )
+                .map(|p| p.to_string_lossy().into_owned())
+                .unwrap_or_default();
+
             let config = AppConfig {
                 model_path,
+                punct_model_path,
                 ..AppConfig::default()
             };
             let tating_app = TaTingApp::new(config)

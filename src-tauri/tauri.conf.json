@@ -28,7 +28,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self' tauri: asset: https://asset.localhost; style-src 'self' 'unsafe-inline' tauri: asset: https://asset.localhost; img-src 'self' data: tauri: asset: https://asset.localhost"
     }
   },
   "bundle": {
@@ -41,7 +41,9 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": [],
+    "resources": [
+      "resources/models/**/*"
+    ],
     "publisher": "TaTing Team",
     "homepage": "https://github.com/ShunL12324/ta-ting"
   },

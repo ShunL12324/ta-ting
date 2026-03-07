@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "./styles/global.css";
 import App from "./App.tsx";
 import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 import { useAppStore } from "./stores/appStore";
 
 // 设置事件监听器
@@ -36,6 +37,11 @@ async function setupEventListeners() {
 
     // 可选：显示错误提示
     // alert(`错误: ${errorMsg}`);
+  });
+
+  // Listen for tray menu "start_dictation" event
+  await listen('hotkey_pressed', async () => {
+    await invoke('trigger_hotkey');
   });
 
   console.log("✅ 事件监听器设置完成");
