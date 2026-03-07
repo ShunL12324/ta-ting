@@ -8,7 +8,6 @@
   ],
   "permissions": [
     "core:default",
-    "updater:default",
-    "core:process:allow-relaunch"
+    "updater:default"
   ]
 }

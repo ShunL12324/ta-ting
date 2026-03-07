@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Mic, MicOff } from 'lucide-react';
+import { Mic } from 'lucide-react';
 
 interface RecordingIndicatorProps {
   isRecording: boolean;
