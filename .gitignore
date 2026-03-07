@@ -33,6 +33,7 @@ src-tauri/gen/
 # Models (too large for git - download separately)
 src-tauri/resources/models/sherpa-zh/*
 !src-tauri/resources/models/sherpa-zh/README.md
+src-tauri/resources/models/sherpa-punct/*
 src-tauri/resources/models/*.bin
 
 # Temporary files

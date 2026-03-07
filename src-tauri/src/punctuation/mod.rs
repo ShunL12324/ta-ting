@@ -1,9 +1,6 @@
-//! 标点恢复模块
+//! Punctuation restoration using sherpa-onnx CT-Transformer model
 //!
-//! 提供两种实现:
-//! 1. 基于规则 (rule_based) - 轻量级，零依赖 ✅ 可用
-//! 2. ONNX 模型 - 高准确度 ⚠️ 待修复 (ort 2.0 API 变化)
+//! Model: sherpa-onnx-punct-ct-transformer-zh-en-vocab272727-2024-04-12
+//! Download: scripts/download-models.sh
 
-mod rule_based;
-
-pub use rule_based::RuleBasedPunctuationRestorer;
+pub use sherpa_rs::punctuate::{Punctuation, PunctuationConfig};

@@ -12,18 +12,22 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use tauri::{AppHandle, Emitter, Manager};
 
-/// TaTing 应用配置
+/// TaTing application config
 pub struct AppConfig {
-    /// Sherpa 模型目录路径
+    /// Sherpa ASR model directory path
     pub model_path: String,
-    /// 录音采样率（设备自适应）
+    /// Sherpa punctuation model .onnx path (empty = skip punctuation)
+    pub punct_model_path: String,
+    /// Recording sample rate
     pub sample_rate: u32,
 }
 
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
-            model_path: "resources/models/sherpa-zh/sherpa-onnx-zipformer-multi-zh-hans-2023-9-2".to_string(),
+            model_path: "resources/models/sherpa-zh/sherpa-onnx-zipformer-multi-zh-hans-2023-9-2"
+                .to_string(),
+            punct_model_path: String::new(),
             sample_rate: 16000,
         }
     }
@@ -61,9 +65,14 @@ impl TaTingApp {
     pub fn initialize(&self) -> Result<()> {
         info!("正在初始化组件...");
 
-        // 1. 初始化 Sherpa 引擎
-        info!("加载 Sherpa 模型: {}", self.config.model_path);
-        let sherpa = SherpaEngine::new(&self.config.model_path)
+        // 1. Initialize Sherpa engine
+        info!("Loading Sherpa model: {}", self.config.model_path);
+        let punct_path = if self.config.punct_model_path.is_empty() {
+            None
+        } else {
+            Some(self.config.punct_model_path.as_str())
+        };
+        let sherpa = SherpaEngine::new(&self.config.model_path, punct_path)
             .context("Failed to load Sherpa model")?;
         *self.sherpa.lock().unwrap() = Some(sherpa);
         info!("✅ Sherpa 引擎初始化完成");
