@@ -40,32 +40,21 @@ const LANGUAGES: { id: LangId; name: string; desc: string; bundled: boolean }[] 
 
 function LanguageSelector() {
   const [selected, setSelected] = useState<LangId>('zh');
-  const [downloading, setDownloading] = useState<LangId | null>(null);
-  const [downloaded, setDownloaded] = useState<Set<LangId>>(new Set());
-
-  const handleDownload = async (id: LangId) => {
-    setDownloading(id);
-    // TODO: invoke('download_model', { lang: id })
-    await new Promise((r) => setTimeout(r, 1500)); // placeholder
-    setDownloaded((prev) => new Set(prev).add(id));
-    setDownloading(null);
-  };
 
   return (
     <div>
       <label className="block text-xs font-semibold text-gray-700 mb-1.5">语言</label>
       <div className="space-y-1.5">
         {LANGUAGES.map((lang) => {
-          const isAvailable = lang.bundled || downloaded.has(lang.id);
+          const isAvailable = lang.bundled;
           const isSelected = selected === lang.id;
-          const isDownloading = downloading === lang.id;
 
           return (
             <div
               key={lang.id}
               onClick={() => isAvailable && setSelected(lang.id)}
               className={`flex items-center justify-between px-3 py-2 rounded-lg border-2 transition-all duration-150 ${
-                isAvailable ? 'cursor-pointer' : 'cursor-default'
+                isAvailable ? 'cursor-pointer' : 'cursor-default opacity-60'
               } ${
                 isSelected
                   ? 'border-blue-500 bg-blue-50'
@@ -93,12 +82,11 @@ function LanguageSelector() {
                 </span>
               ) : (
                 <button
-                  onClick={(e) => { e.stopPropagation(); handleDownload(lang.id); }}
-                  disabled={isDownloading}
-                  className="flex items-center gap-1 text-[10px] text-blue-500 hover:text-blue-700 font-medium disabled:opacity-50"
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-1 text-[10px] text-blue-500 hover:text-blue-700 font-medium"
                 >
-                  <Download className={`w-3 h-3 ${isDownloading ? 'animate-bounce' : ''}`} />
-                  {isDownloading ? '下载中...' : '下载'}
+                  <Download className="w-3 h-3" />
+                  下载
                 </button>
               )}
             </div>
