@@ -1,4 +1,4 @@
-import { Settings, X, Keyboard } from 'lucide-react';
+import { Settings, X, Keyboard, Download, Check } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { useAppStore } from '../stores/appStore';
@@ -26,6 +26,85 @@ function HotkeyBadges({ parts }: { parts: string[] }) {
           )}
         </span>
       ))}
+    </div>
+  );
+}
+
+type LangId = 'zh' | 'en' | 'auto';
+
+const LANGUAGES: { id: LangId; name: string; desc: string; bundled: boolean }[] = [
+  { id: 'zh',   name: '中文',   desc: 'Chinese',              bundled: true  },
+  { id: 'en',   name: 'English', desc: 'English',             bundled: false },
+  { id: 'auto', name: '自动',   desc: 'Chinese & English',    bundled: true  },
+];
+
+function LanguageSelector() {
+  const [selected, setSelected] = useState<LangId>('zh');
+  const [downloading, setDownloading] = useState<LangId | null>(null);
+  const [downloaded, setDownloaded] = useState<Set<LangId>>(new Set());
+
+  const handleDownload = async (id: LangId) => {
+    setDownloading(id);
+    // TODO: invoke('download_model', { lang: id })
+    await new Promise((r) => setTimeout(r, 1500)); // placeholder
+    setDownloaded((prev) => new Set(prev).add(id));
+    setDownloading(null);
+  };
+
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-gray-700 mb-1.5">语言</label>
+      <div className="space-y-1.5">
+        {LANGUAGES.map((lang) => {
+          const isAvailable = lang.bundled || downloaded.has(lang.id);
+          const isSelected = selected === lang.id;
+          const isDownloading = downloading === lang.id;
+
+          return (
+            <div
+              key={lang.id}
+              onClick={() => isAvailable && setSelected(lang.id)}
+              className={`flex items-center justify-between px-3 py-2 rounded-lg border-2 transition-all duration-150 ${
+                isAvailable ? 'cursor-pointer' : 'cursor-default'
+              } ${
+                isSelected
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <div
+                  className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                    isSelected ? 'border-blue-500' : 'border-gray-300'
+                  }`}
+                >
+                  {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-gray-800">{lang.name}</span>
+                  <span className="ml-1.5 text-[10px] text-gray-400">{lang.desc}</span>
+                </div>
+              </div>
+
+              {isAvailable ? (
+                <span className="flex items-center gap-1 text-[10px] text-green-600 font-medium">
+                  <Check className="w-3 h-3" />
+                  已安装
+                </span>
+              ) : (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleDownload(lang.id); }}
+                  disabled={isDownloading}
+                  className="flex items-center gap-1 text-[10px] text-blue-500 hover:text-blue-700 font-medium disabled:opacity-50"
+                >
+                  <Download className={`w-3 h-3 ${isDownloading ? 'animate-bounce' : ''}`} />
+                  {isDownloading ? '下载中...' : '下载'}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -158,17 +237,7 @@ export function SettingsPanel() {
 
             <div className="space-y-4">
               {/* Language */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">语言</label>
-                <select
-                  className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 hover:bg-white cursor-pointer"
-                  defaultValue="zh"
-                >
-                  <option value="zh">中文</option>
-                  <option value="en">English</option>
-                  <option value="auto">自动检测</option>
-                </select>
-              </div>
+              <LanguageSelector />
 
               {/* Hotkey */}
               <div>
