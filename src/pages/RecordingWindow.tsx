@@ -174,7 +174,7 @@ export function RecordingWindow() {
         <div className="
           w-full h-full
           flex items-center gap-3 px-4 py-2
-          bg-gradient-to-r from-red-500 to-pink-600
+          bg-destructive
           rounded-full
           shadow-2xl
           animate-in fade-in slide-in-from-bottom-2 duration-300

@@ -18,57 +18,56 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: 'windows-latest'
+          - platform: windows-latest
             args: ''
-          - platform: 'macos-latest'
+          - platform: macos-latest
             args: '--target universal-apple-darwin'
+          - platform: ubuntu-22.04
+            args: ''
 
     runs-on: ${{ matrix.platform }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
+      - uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
 
-      - name: Install frontend dependencies
-        run: npm ci
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
 
-      - name: Download Sherpa-ONNX models (Windows)
+      - run: npm ci
+
+      - name: Download models (Windows)
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
-          Write-Host "Downloading Sherpa-ONNX models..."
           if (Test-Path scripts/download-models.ps1) {
             & scripts/download-models.ps1
-          } else {
-            Write-Host "Download script not found, skipping model download"
           }
 
-      - name: Download Sherpa-ONNX models (macOS)
-        if: matrix.platform == 'macos-latest'
+      - name: Download models (macOS / Linux)
+        if: matrix.platform != 'windows-latest'
         run: |
-          echo "Downloading Sherpa-ONNX models..."
-          if [ -f scripts/download-models.sh ]; then
-            chmod +x scripts/download-models.sh
-            ./scripts/download-models.sh
-          else
-            echo "Download script not found, skipping model download"
-          fi
+          chmod +x scripts/download-models.sh
+          ./scripts/download-models.sh
 
-      - name: Build Tauri app (compile only)
+      - name: Build
         run: npm run tauri build -- ${{ matrix.args }}
 
       - name: Upload artifacts (Windows)
@@ -84,5 +83,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: macos-build
+          path: src-tauri/target/release/bundle/**/*
+          retention-days: 7
+
+      - name: Upload artifacts (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
           path: src-tauri/target/release/bundle/**/*
           retention-days: 7

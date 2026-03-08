@@ -12,19 +12,19 @@ function App() {
         return {
           text: '按 Ctrl+Shift+V 开始听写',
           emoji: '🎙️',
-          color: 'text-gray-700'
+          color: 'text-muted-foreground'
         };
       case 'recording':
         return {
           text: '正在录音...',
           emoji: '🎤',
-          color: 'text-red-600'
+          color: 'text-destructive'
         };
       case 'transcribing':
         return {
           text: '正在转录...',
           emoji: '✨',
-          color: 'text-blue-600'
+          color: 'text-primary'
         };
       case 'inputting':
         return {
@@ -36,7 +36,7 @@ function App() {
         return {
           text: '就绪',
           emoji: '🎙️',
-          color: 'text-gray-700'
+          color: 'text-muted-foreground'
         };
     }
   };
@@ -44,18 +44,18 @@ function App() {
   const status = getStatusConfig();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-8">
+    <div className="min-h-screen bg-background flex items-center justify-center p-8">
       <RecordingIndicator isRecording={isRecording} />
       <SettingsPanel />
       <UpdateChecker />
 
       <div className="text-center space-y-12 max-w-2xl w-full">
         {/* 标题区域 */}
-        <div className="space-y-4 transition-all duration-500">
-          <h1 className="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 tracking-tight">
+        <div className="space-y-2 transition-all duration-500">
+          <h1 className="text-4xl font-bold tracking-tight text-foreground">
             TaTing
           </h1>
-          <p className="text-2xl text-gray-600 font-light">AI 离线听写输入法</p>
+          <p className="text-sm text-muted-foreground mt-1">AI 离线听写输入法</p>
         </div>
 
         {/* 状态提示区域 */}
@@ -73,40 +73,40 @@ function App() {
           </div>
 
           {/* 快捷键提示 */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/60 backdrop-blur-sm rounded-full border border-gray-200 shadow-sm">
-            <kbd className="px-2 py-1 bg-gray-100 text-gray-700 rounded font-mono text-sm font-semibold">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-background/60 backdrop-blur-sm rounded-full border border-border shadow-sm">
+            <kbd className="px-2 py-1 bg-muted text-foreground rounded font-mono text-sm font-semibold border border-border">
               Ctrl
             </kbd>
-            <span className="text-gray-400">+</span>
-            <kbd className="px-2 py-1 bg-gray-100 text-gray-700 rounded font-mono text-sm font-semibold">
+            <span className="text-muted-foreground">+</span>
+            <kbd className="px-2 py-1 bg-muted text-foreground rounded font-mono text-sm font-semibold border border-border">
               Shift
             </kbd>
-            <span className="text-gray-400">+</span>
-            <kbd className="px-2 py-1 bg-gray-100 text-gray-700 rounded font-mono text-sm font-semibold">
+            <span className="text-muted-foreground">+</span>
+            <kbd className="px-2 py-1 bg-muted text-foreground rounded font-mono text-sm font-semibold border border-border">
               V
             </kbd>
           </div>
 
           {/* 错误提示 */}
           {error && (
-            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
-              <p className="text-sm text-red-700 font-medium">{error}</p>
+            <div className="mt-6 p-4 bg-destructive/10 border border-destructive/30 rounded-xl shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+              <p className="text-sm text-destructive font-medium">{error}</p>
             </div>
           )}
         </div>
 
         {/* 状态指示器 */}
         <div className="pt-12">
-          <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-white/70 backdrop-blur-sm rounded-full shadow-sm border border-gray-200">
+          <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-background/70 backdrop-blur-sm rounded-full shadow-sm border border-border">
             <span className={`
               relative inline-flex w-3 h-3 rounded-full transition-all duration-300
-              ${state === 'idle' ? 'bg-green-500' : 'bg-blue-500'}
+              ${state === 'idle' ? 'bg-green-500' : 'bg-primary'}
             `}>
               {state !== 'idle' && (
-                <span className="absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75 animate-ping"></span>
+                <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 animate-ping"></span>
               )}
             </span>
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-sm font-medium text-muted-foreground">
               {state === 'idle' ? '就绪' : '工作中'}
             </span>
           </div>
