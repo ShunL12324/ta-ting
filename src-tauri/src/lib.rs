@@ -101,7 +101,7 @@ async fn check_for_updates(app: AppHandle) -> Result<String, String> {
 
 // ==================== 录音窗口管理 ====================
 
-use tauri::{WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use tauri::{WebviewUrl, WebviewWindow, WebviewWindowBuilder, window::Color};
 
 pub fn create_recording_window<R: tauri::Runtime>(
     app_handle: &AppHandle<R>,
@@ -110,10 +110,10 @@ pub fn create_recording_window<R: tauri::Runtime>(
 
     let (x, y) = if let Ok(Some(monitor)) = app_handle.primary_monitor() {
         let screen = monitor.size();
-        let window_width = 400;
-        let window_height = 90;
+        let window_width = 280;
+        let window_height = 44;
         let x = (screen.width as i32 - window_width) / 2;
-        let y = (screen.height as f32 * 0.7) as i32;
+        let y = (screen.height as f32 * 0.82) as i32;
         (x as f64, y as f64)
     } else {
         (0.0, 0.0)
@@ -125,13 +125,14 @@ pub fn create_recording_window<R: tauri::Runtime>(
         WebviewUrl::App("recording.html".into()),
     )
     .title("录音中")
-    .inner_size(400.0, 90.0)
+    .inner_size(280.0, 44.0)
     .position(x, y)
     .decorations(false)
     .always_on_top(true)
     .skip_taskbar(true)
     .resizable(false)
     .transparent(true)
+    .background_color(Color(0, 0, 0, 0))
     .visible(true)
     .build()
     .map_err(|e| e.to_string())?;

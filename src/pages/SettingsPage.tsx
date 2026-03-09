@@ -2,10 +2,6 @@ import {
   Keyboard,
   DownloadSimple,
   Check,
-  Translate,
-  Devices,
-  SlidersHorizontal,
-  Info,
 } from '@phosphor-icons/react';
 import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
@@ -14,8 +10,7 @@ import { useAppStore } from '../stores/appStore';
 import { Button } from '../components/ui/button';
 import { Switch } from '../components/ui/switch';
 import { Label } from '../components/ui/label';
-import { Badge } from '../components/ui/badge';
-import { Card } from '../components/ui/card';
+import { Separator } from '../components/ui/separator';
 
 function hotkeyToDisplayParts(hotkey: string): string[] {
   return hotkey.split('+').map((part) => {
@@ -27,18 +22,26 @@ function hotkeyToDisplayParts(hotkey: string): string[] {
 
 function HotkeyBadges({ parts }: { parts: string[] }) {
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
+    <div className="flex items-center gap-1 flex-wrap">
       {parts.map((part, i) => (
-        <span key={i} className="flex items-center gap-1.5">
-          <kbd className="px-2 py-1 bg-background text-foreground rounded text-xs font-semibold shadow-sm border border-border">
+        <span key={i} className="flex items-center gap-1">
+          <kbd className="px-1.5 py-0.5 bg-muted text-foreground rounded text-xs font-semibold border border-border">
             {part}
           </kbd>
           {i < parts.length - 1 && (
-            <span className="text-muted-foreground text-xs font-bold">+</span>
+            <span className="text-muted-foreground text-xs">+</span>
           )}
         </span>
       ))}
     </div>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="px-1 pb-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+      {children}
+    </p>
   );
 }
 
@@ -52,7 +55,7 @@ function TranscriptionLangSelector() {
   const [selected, setSelected] = useState<LangId>('zh');
 
   return (
-    <div className="space-y-1.5">
+    <div>
       {LANG_IDS.map((id) => {
         const isAvailable = LANG_BUNDLED[id];
         const isSelected = selected === id;
@@ -61,40 +64,28 @@ function TranscriptionLangSelector() {
           <div
             key={id}
             onClick={() => isAvailable && setSelected(id)}
-            className={`flex items-center justify-between px-3 py-2 rounded-lg border-2 transition-all duration-150 ${
-              isAvailable ? 'cursor-pointer' : 'cursor-default opacity-60'
-            } ${
-              isSelected
-                ? 'border-primary bg-primary/10'
-                : 'border-border bg-background hover:bg-accent'
-            }`}
+            className={`flex items-center justify-between px-2 py-2 rounded-md transition-colors ${
+              isAvailable ? 'cursor-pointer' : 'cursor-default opacity-50'
+            } ${isSelected ? 'bg-accent' : 'hover:bg-muted/60'}`}
           >
-            <div className="flex items-center gap-2.5">
-              <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                isSelected ? 'border-primary' : 'border-muted-foreground'
-              }`}>
-                {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
-              </div>
-              <div>
-                <span className="text-sm font-medium text-foreground">
-                  {t(`settings.transcriptionLang.languages.${id}.name`)}
-                </span>
-                <span className="ml-1.5 text-[10px] text-muted-foreground">
-                  {t(`settings.transcriptionLang.languages.${id}.desc`)}
-                </span>
-              </div>
+            <div>
+              <span className="text-sm font-medium text-foreground">
+                {t(`settings.transcriptionLang.languages.${id}.name`)}
+              </span>
+              <span className="ml-2 text-xs text-muted-foreground">
+                {t(`settings.transcriptionLang.languages.${id}.desc`)}
+              </span>
             </div>
             {isAvailable ? (
-              <Badge className="gap-1 border-transparent bg-success/15 text-success hover:bg-success/20">
-                <Check size={12} weight="bold" />
-                {t('common.installed')}
-              </Badge>
+              isSelected
+                ? <Check size={15} weight="bold" className="text-primary flex-shrink-0" />
+                : null
             ) : (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={(e) => e.stopPropagation()}
-                className="h-auto py-0.5 px-2 text-[10px]"
+                className="h-auto py-0.5 px-2 text-xs text-muted-foreground"
               >
                 <DownloadSimple size={12} />
                 {t('common.download')}
@@ -114,23 +105,18 @@ function UILanguageSelector() {
   const current = (i18n.language === 'en' ? 'en' : 'zh') as UILang;
 
   return (
-    <div className="flex gap-2">
+    <div className="flex bg-muted rounded-lg p-1">
       {(['zh', 'en'] as UILang[]).map((id) => (
         <button
           key={id}
           onClick={() => i18n.changeLanguage(id)}
-          className={`flex-1 py-2 px-3 rounded-lg border-2 text-left transition-all duration-150 ${
+          className={`flex-1 py-1.5 rounded-md text-sm font-medium transition-all ${
             current === id
-              ? 'border-primary bg-primary/10'
-              : 'border-border bg-background hover:bg-accent'
+              ? 'bg-background text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          <p className="text-sm font-medium text-foreground">
-            {t(`settings.uiLang.options.${id}.label`)}
-          </p>
-          <p className="text-[10px] text-muted-foreground">
-            {t(`settings.uiLang.options.${id}.sub`)}
-          </p>
+          {t(`settings.uiLang.options.${id}.label`)}
         </button>
       ))}
     </div>
@@ -220,74 +206,42 @@ function HotkeyRecorder() {
   };
 
   return (
-    <div className="space-y-2">
-      <div className="px-3 py-2.5 border border-input rounded-md bg-background min-h-[42px] flex items-center justify-between gap-2">
-        {recording ? (
-          <span className="text-xs text-primary font-medium animate-pulse flex items-center gap-1.5">
-            <Keyboard size={14} />
-            {pendingParts.length > 0 ? <HotkeyBadges parts={pendingParts} /> : t('settings.hotkey.pressCombo')}
-          </span>
-        ) : pendingHotkey ? (
-          <HotkeyBadges parts={pendingParts} />
-        ) : (
-          <HotkeyBadges parts={currentParts} />
-        )}
-        {!recording && (
-          <Button variant="ghost" size="sm" onClick={startRecording} className="h-auto py-0.5 px-2 text-xs">
-            {t('common.change')}
-          </Button>
-        )}
-        {recording && (
-          <Button variant="ghost" size="sm" onClick={cancelRecording} className="h-auto py-0.5 px-2 text-xs">
-            {t('common.cancel')}
-          </Button>
-        )}
-      </div>
-
-      {pendingHotkey && !recording && (
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] text-muted-foreground">{t('settings.hotkey.saveHint')}</span>
-          <div className="flex gap-1.5">
-            <Button variant="outline" size="sm" onClick={cancelRecording} className="h-auto py-1 px-2.5 text-[10px]">
+    <div className="space-y-1">
+      <div className="flex items-center justify-between px-2 py-2 rounded-md hover:bg-muted/60 transition-colors">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {recording ? (
+            <span className="text-xs text-primary font-medium animate-pulse flex items-center gap-1.5">
+              <Keyboard size={14} />
+              {pendingParts.length > 0
+                ? <HotkeyBadges parts={pendingParts} />
+                : t('settings.hotkey.pressCombo')}
+            </span>
+          ) : (
+            <HotkeyBadges parts={pendingParts.length > 0 ? pendingParts : currentParts} />
+          )}
+        </div>
+        <div className="flex gap-1 flex-shrink-0">
+          {!recording && !pendingHotkey && (
+            <Button variant="ghost" size="sm" onClick={startRecording} className="h-7 px-2 text-xs">
+              {t('common.change')}
+            </Button>
+          )}
+          {(recording || pendingHotkey) && (
+            <Button variant="ghost" size="sm" onClick={cancelRecording} className="h-7 px-2 text-xs">
               {t('common.cancel')}
             </Button>
-            <Button size="sm" onClick={applyHotkey} className="h-auto py-1 px-2.5 text-[10px]">
+          )}
+          {pendingHotkey && !recording && (
+            <Button size="sm" onClick={applyHotkey} className="h-7 px-2 text-xs">
               {t('common.apply')}
             </Button>
-          </div>
+          )}
         </div>
-      )}
-
-      {saveError && <p className="text-xs text-destructive">{saveError}</p>}
-      {saveSuccess && <p className="text-xs text-success">{t('settings.hotkey.saved')}</p>}
-
-      <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-        <span className="w-1 h-1 rounded-full bg-primary inline-block" />
-        {t('settings.hotkey.modifierHint')}
-      </p>
-    </div>
-  );
-}
-
-function SettingCard({
-  icon: Icon,
-  title,
-  children,
-}: {
-  icon: React.ElementType;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Card className="p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <Icon size={15} weight="duotone" className="text-muted-foreground" />
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          {title}
-        </span>
       </div>
-      {children}
-    </Card>
+      {saveError && <p className="px-2 text-xs text-destructive">{saveError}</p>}
+      {saveSuccess && <p className="px-2 text-xs text-primary">{t('settings.hotkey.saved')}</p>}
+      <p className="px-2 text-[10px] text-muted-foreground">{t('settings.hotkey.modifierHint')}</p>
+    </div>
   );
 }
 
@@ -295,48 +249,62 @@ export function SettingsPage() {
   const { t } = useTranslation();
 
   return (
-    <div className="p-4 space-y-3 max-w-lg">
-      <SettingCard icon={Translate} title={t('settings.transcriptionLang.title')}>
+    <div className="px-4 py-4 space-y-4 h-full overflow-y-auto">
+
+      <section>
+        <SectionLabel>{t('settings.transcriptionLang.title')}</SectionLabel>
         <TranscriptionLangSelector />
-      </SettingCard>
+      </section>
 
-      <SettingCard icon={Devices} title={t('settings.uiLang.title')}>
+      <Separator />
+
+      <section>
+        <SectionLabel>{t('settings.uiLang.title')}</SectionLabel>
         <UILanguageSelector />
-      </SettingCard>
+      </section>
 
-      <SettingCard icon={Keyboard} title={t('settings.hotkey.title')}>
+      <Separator />
+
+      <section>
+        <SectionLabel>{t('settings.hotkey.title')}</SectionLabel>
         <HotkeyRecorder />
-      </SettingCard>
+      </section>
 
-      <SettingCard icon={SlidersHorizontal} title={t('settings.behavior.title')}>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between py-1">
-            <Label htmlFor="autostart" className="text-sm font-medium cursor-pointer">
+      <Separator />
+
+      <section>
+        <SectionLabel>{t('settings.behavior.title')}</SectionLabel>
+        <div>
+          <div className="flex items-center justify-between px-2 py-2 rounded-md hover:bg-muted/60 transition-colors">
+            <Label htmlFor="autostart" className="text-sm font-normal cursor-pointer">
               {t('settings.behavior.autostart')}
             </Label>
             <Switch id="autostart" />
           </div>
-          <div className="flex items-center justify-between py-1">
-            <Label htmlFor="show-transcription" className="text-sm font-medium cursor-pointer">
+          <div className="flex items-center justify-between px-2 py-2 rounded-md hover:bg-muted/60 transition-colors">
+            <Label htmlFor="show-transcription" className="text-sm font-normal cursor-pointer">
               {t('settings.behavior.showTranscription')}
             </Label>
             <Switch id="show-transcription" defaultChecked />
           </div>
         </div>
-      </SettingCard>
+      </section>
 
-      <SettingCard icon={Info} title={t('settings.about.title')}>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-semibold text-foreground">TaTing</p>
-            <p className="text-xs text-muted-foreground">{t('settings.about.subtitle')}</p>
-          </div>
-          <div className="flex gap-1.5">
-            <Badge variant="outline">v0.2.0</Badge>
-            <Badge className="border-transparent bg-success/15 text-success hover:bg-success/20">Offline</Badge>
+      <Separator />
+
+      <section>
+        <SectionLabel>{t('settings.about.title')}</SectionLabel>
+        <div className="flex items-center justify-between px-2 py-1.5">
+          <span className="text-sm text-foreground">TaTing</span>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>v0.2.0</span>
+            <span>·</span>
+            <span className="text-success">{t('settings.about.offline')}</span>
           </div>
         </div>
-      </SettingCard>
+        <p className="px-2 text-xs text-muted-foreground">{t('settings.about.subtitle')}</p>
+      </section>
+
     </div>
   );
 }

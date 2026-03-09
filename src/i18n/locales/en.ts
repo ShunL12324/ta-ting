@@ -53,6 +53,7 @@ export default {
     about: {
       title: 'About',
       subtitle: 'Offline AI Dictation IME',
+      offline: 'Offline',
     },
   },
 } as const;

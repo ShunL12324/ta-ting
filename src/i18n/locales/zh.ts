@@ -53,6 +53,7 @@ export default {
     about: {
       title: '关于',
       subtitle: 'AI 离线听写输入法',
+      offline: '离线',
     },
   },
 } as const;
