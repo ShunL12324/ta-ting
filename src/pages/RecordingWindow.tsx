@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
-import { Mic } from 'lucide-react';
+import { Microphone } from '@phosphor-icons/react';
 
 export function RecordingWindow() {
   const [duration, setDuration] = useState(0);
@@ -181,7 +181,7 @@ export function RecordingWindow() {
         ">
           {/* 左侧：录音图标 */}
           <div className="relative flex-shrink-0">
-            <Mic className="w-5 h-5 text-white" />
+            <Microphone className="w-5 h-5 text-white" />
             <div className="absolute inset-0 bg-white rounded-full opacity-40 animate-ping"></div>
           </div>
 

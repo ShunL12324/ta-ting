@@ -14,15 +14,15 @@
       {
         "label": "main",
         "title": "TaTing - AI 离线听写输入法",
-        "width": 480,
-        "height": 600,
-        "minWidth": 400,
-        "minHeight": 500,
+        "width": 640,
+        "height": 480,
+        "minWidth": 480,
+        "minHeight": 360,
         "visible": true,
         "center": true,
         "resizable": true,
         "fullscreen": false,
-        "decorations": true,
+        "decorations": false,
         "alwaysOnTop": false,
         "skipTaskbar": false
       }

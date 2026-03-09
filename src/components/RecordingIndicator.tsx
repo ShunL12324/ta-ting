@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Mic } from 'lucide-react';
+import { Microphone } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
 
 interface RecordingIndicatorProps {
   isRecording: boolean;
 }
 
 export function RecordingIndicator({ isRecording }: RecordingIndicatorProps) {
+  const { t } = useTranslation();
   const [duration, setDuration] = useState(0);
 
   useEffect(() => {
@@ -32,7 +34,7 @@ export function RecordingIndicator({ isRecording }: RecordingIndicatorProps) {
   }
 
   return (
-    <div className="fixed top-6 right-6 z-50">
+    <div className="absolute top-4 right-4 z-50">
       <div className="relative">
         {/* 脉动背景 */}
         <div className="absolute inset-0 bg-destructive rounded-2xl animate-pulse opacity-20 blur-xl"></div>
@@ -41,7 +43,7 @@ export function RecordingIndicator({ isRecording }: RecordingIndicatorProps) {
         <div className="relative flex items-center gap-3 px-5 py-3 bg-destructive text-destructive-foreground rounded-2xl shadow-xl backdrop-blur-sm">
           {/* 录音图标带脉动效果 */}
           <div className="relative">
-            <Mic className="w-5 h-5 relative z-10" />
+            <Microphone size={20} weight="fill" className="relative z-10" />
             <div className="absolute inset-0 bg-destructive-foreground rounded-full opacity-30 animate-ping"></div>
           </div>
 
@@ -54,7 +56,7 @@ export function RecordingIndicator({ isRecording }: RecordingIndicatorProps) {
           <div className="w-px h-4 bg-destructive-foreground/30"></div>
 
           {/* 文字提示 */}
-          <span className="text-sm font-medium">正在录音</span>
+          <span className="text-sm font-medium">{t('recording.label')}</span>
 
           {/* 音波动画 */}
           <div className="flex items-center gap-0.5 ml-1">

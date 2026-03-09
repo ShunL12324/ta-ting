@@ -1,116 +1,112 @@
-import { RecordingIndicator } from "./components/RecordingIndicator";
-import { SettingsPanel } from "./components/SettingsPanel";
-import { UpdateChecker } from "./components/UpdateChecker";
-import { useAppStore } from "./stores/appStore";
+import { useState } from 'react';
+import { Microphone, GearSix, Minus, X } from '@phosphor-icons/react';
+import { useTranslation } from 'react-i18next';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { RecordingIndicator } from './components/RecordingIndicator';
+import { UpdateChecker } from './components/UpdateChecker';
+import { useAppStore } from './stores/appStore';
+import { HomePage } from './pages/HomePage';
+import { SettingsPage } from './pages/SettingsPage';
 
-function App() {
-  const { isRecording, state, error } = useAppStore();
+type Page = 'home' | 'settings';
 
-  const getStatusConfig = () => {
-    switch (state) {
-      case 'idle':
-        return {
-          text: '按 Ctrl+Shift+V 开始听写',
-          emoji: '🎙️',
-          color: 'text-muted-foreground'
-        };
-      case 'recording':
-        return {
-          text: '正在录音...',
-          emoji: '🎤',
-          color: 'text-destructive'
-        };
-      case 'transcribing':
-        return {
-          text: '正在转录...',
-          emoji: '✨',
-          color: 'text-primary'
-        };
-      case 'inputting':
-        return {
-          text: '正在输入...',
-          emoji: '⌨️',
-          color: 'text-green-600'
-        };
-      default:
-        return {
-          text: '就绪',
-          emoji: '🎙️',
-          color: 'text-muted-foreground'
-        };
-    }
-  };
+function TitleBar() {
+  return (
+    <div
+      data-tauri-drag-region
+      className="h-9 flex items-center justify-between px-3 bg-card border-b border-border flex-shrink-0 select-none z-10 shadow-sm"
+    >
+      <div className="flex items-center gap-2 pointer-events-none">
+        <div className="w-4 h-4 rounded bg-primary flex items-center justify-center">
+          <span className="text-primary-foreground text-[9px] font-black leading-none">T</span>
+        </div>
+        <span className="text-xs font-medium text-muted-foreground">TaTing</span>
+      </div>
 
-  const status = getStatusConfig();
+      <div className="flex items-center gap-0.5">
+        <button
+          onClick={() => getCurrentWindow().minimize()}
+          className="w-7 h-7 flex items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        >
+          <Minus size={14} />
+        </button>
+        <button
+          onClick={() => getCurrentWindow().close()}
+          className="w-7 h-7 flex items-center justify-center rounded text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors"
+        >
+          <X size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface NavItem {
+  page: Page;
+  labelKey: string;
+  Icon: React.ElementType;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { page: 'home',     labelKey: 'nav.home',     Icon: Microphone },
+  { page: 'settings', labelKey: 'nav.settings', Icon: GearSix    },
+];
+
+interface SidebarProps {
+  currentPage: Page;
+  onNavigate: (page: Page) => void;
+}
+
+function Sidebar({ currentPage, onNavigate }: SidebarProps) {
+  const { t } = useTranslation();
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-8">
-      <RecordingIndicator isRecording={isRecording} />
-      <SettingsPanel />
-      <UpdateChecker />
+    <div className="w-40 flex flex-col py-2 px-2 bg-muted border-r border-border flex-shrink-0">
+      {/* Nav */}
+      <div className="flex flex-col gap-0.5 flex-1">
+        {NAV_ITEMS.map(({ page, labelKey, Icon }) => {
+          const isActive = currentPage === page;
 
-      <div className="text-center space-y-12 max-w-2xl w-full">
-        {/* 标题区域 */}
-        <div className="space-y-2 transition-all duration-500">
-          <h1 className="text-4xl font-bold tracking-tight text-foreground">
-            TaTing
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">AI 离线听写输入法</p>
-        </div>
+          return (
+            <button
+              key={page}
+              onClick={() => onNavigate(page)}
+              className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+              }`}
+            >
+              <Icon size={16} weight={isActive ? 'fill' : 'regular'} />
+              <span>{t(labelKey)}</span>
+            </button>
+          );
+        })}
+      </div>
 
-        {/* 状态提示区域 */}
-        <div className="space-y-6">
-          <div className={`
-            text-3xl font-semibold transition-all duration-300
-            ${status.color}
-          `}>
-            <span className="inline-block mr-3 transition-transform duration-300 hover:scale-110">
-              {status.emoji}
-            </span>
-            <span className="transition-opacity duration-300">
-              {status.text}
-            </span>
-          </div>
+      {/* Version */}
+      <span className="px-3 text-[10px] text-muted-foreground/40 font-mono">
+        v0.2.0
+      </span>
+    </div>
+  );
+}
 
-          {/* 快捷键提示 */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-background/60 backdrop-blur-sm rounded-full border border-border shadow-sm">
-            <kbd className="px-2 py-1 bg-muted text-foreground rounded font-mono text-sm font-semibold border border-border">
-              Ctrl
-            </kbd>
-            <span className="text-muted-foreground">+</span>
-            <kbd className="px-2 py-1 bg-muted text-foreground rounded font-mono text-sm font-semibold border border-border">
-              Shift
-            </kbd>
-            <span className="text-muted-foreground">+</span>
-            <kbd className="px-2 py-1 bg-muted text-foreground rounded font-mono text-sm font-semibold border border-border">
-              V
-            </kbd>
-          </div>
+function App() {
+  const [page, setPage] = useState<Page>('home');
+  const { isRecording } = useAppStore();
 
-          {/* 错误提示 */}
-          {error && (
-            <div className="mt-6 p-4 bg-destructive/10 border border-destructive/30 rounded-xl shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
-              <p className="text-sm text-destructive font-medium">{error}</p>
-            </div>
-          )}
-        </div>
-
-        {/* 状态指示器 */}
-        <div className="pt-12">
-          <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-background/70 backdrop-blur-sm rounded-full shadow-sm border border-border">
-            <span className={`
-              relative inline-flex w-3 h-3 rounded-full transition-all duration-300
-              ${state === 'idle' ? 'bg-green-500' : 'bg-primary'}
-            `}>
-              {state !== 'idle' && (
-                <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 animate-ping"></span>
-              )}
-            </span>
-            <span className="text-sm font-medium text-muted-foreground">
-              {state === 'idle' ? '就绪' : '工作中'}
-            </span>
-          </div>
-        </div>
+  return (
+    <div className="flex flex-col h-screen bg-background overflow-hidden">
+      <TitleBar />
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar currentPage={page} onNavigate={setPage} />
+        <main className="flex-1 overflow-y-auto relative">
+          <RecordingIndicator isRecording={isRecording} />
+          <UpdateChecker />
+          {page === 'home' && <HomePage />}
+          {page === 'settings' && <SettingsPage />}
+        </main>
       </div>
     </div>
   );
