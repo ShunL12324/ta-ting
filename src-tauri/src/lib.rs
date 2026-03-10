@@ -307,9 +307,8 @@ pub fn run() {
             setup_global_hotkey(&settings.hotkey, app.handle().clone(), Arc::clone(&app_state))
                 .map_err(|e| format!("注册全局热键失败: {}", e))?;
 
-            // 4. Create tray with hotkey display label
-            let display = system::hotkey::hotkey_to_display(&settings.hotkey);
-            system::tray::create_tray(app.handle(), &display)?;
+            // 4. Create tray
+            system::tray::create_tray(app.handle())?;
 
             // 5. Auto-update plugin
             app.handle()

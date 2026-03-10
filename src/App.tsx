@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Microphone, GearSix, Minus, X } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -11,41 +11,23 @@ import { SettingsPage } from './pages/SettingsPage';
 type Page = 'home' | 'settings';
 
 function TitleBar() {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const appWindow = getCurrentWindow();
-    const onMouseDown = (e: MouseEvent) => {
-      if (e.buttons === 1) appWindow.startDragging();
-    };
-    el.addEventListener('mousedown', onMouseDown);
-    return () => el.removeEventListener('mousedown', onMouseDown);
-  }, []);
-
   return (
-    <div
-      ref={ref}
-      className="h-9 flex items-center justify-between px-3 bg-card border-b border-border flex-shrink-0 select-none z-10 shadow-sm cursor-grab active:cursor-grabbing"
-    >
-      <div className="flex items-center gap-2 pointer-events-none">
-        <div className="w-4 h-4 rounded bg-primary flex items-center justify-center">
+    <div className="h-9 flex items-center justify-between px-3 bg-card border-b border-border flex-shrink-0 select-none z-10 shadow-sm">
+      <div data-tauri-drag-region className="flex items-center gap-2 flex-1 h-full cursor-grab active:cursor-grabbing">
+        <div className="w-4 h-4 rounded bg-primary flex items-center justify-center pointer-events-none">
           <span className="text-primary-foreground text-[9px] font-black leading-none">T</span>
         </div>
-        <span className="text-xs font-medium text-muted-foreground">TaTing</span>
+        <span className="text-xs font-medium text-muted-foreground pointer-events-none">TaTing</span>
       </div>
 
       <div className="flex items-center gap-0.5">
         <button
-          onMouseDown={(e) => e.stopPropagation()}
           onClick={() => getCurrentWindow().minimize()}
           className="w-7 h-7 flex items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-default"
         >
           <Minus size={14} />
         </button>
         <button
-          onMouseDown={(e) => e.stopPropagation()}
           onClick={() => getCurrentWindow().close()}
           className="w-7 h-7 flex items-center justify-center rounded text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-colors cursor-default"
         >

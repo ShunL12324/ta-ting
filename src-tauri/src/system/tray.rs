@@ -7,29 +7,17 @@ use log::info;
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder},
     tray::{TrayIconBuilder, TrayIconEvent},
-    AppHandle, Emitter, Manager, Runtime,
+    AppHandle, Manager, Runtime,
 };
 
 /// 创建系统托盘
-///
-/// `hotkey_display`: human-readable hotkey label, e.g. "Ctrl+Shift+V"
-pub fn create_tray<R: Runtime>(app: &AppHandle<R>, hotkey_display: &str) -> Result<()> {
+pub fn create_tray<R: Runtime>(app: &AppHandle<R>) -> Result<()> {
     info!("创建系统托盘...");
 
     // 创建托盘菜单
-    let start_label = format!("开始听写 ({})", hotkey_display);
-    let start_item = MenuItemBuilder::with_id("start_dictation", &start_label)
-        .build(app)?;
-    let settings_item = MenuItemBuilder::with_id("settings", "设置").build(app)?;
-    let check_update_item = MenuItemBuilder::with_id("check_update", "检查更新").build(app)?;
-    let quit_item = MenuItemBuilder::with_id("quit", "退出").build(app)?;
+    let quit_item = MenuItemBuilder::with_id("quit", "Exit").build(app)?;
 
     let menu = MenuBuilder::new(app)
-        .item(&start_item)
-        .item(&settings_item)
-        .separator()
-        .item(&check_update_item)
-        .separator()
         .item(&quit_item)
         .build()?;
 
@@ -37,6 +25,7 @@ pub fn create_tray<R: Runtime>(app: &AppHandle<R>, hotkey_display: &str) -> Resu
     let _tray = TrayIconBuilder::new()
         .icon(app.default_window_icon().unwrap().clone())
         .menu(&menu)
+        .menu_on_left_click(false)
         .tooltip("TaTing - AI 离线听写输入法")
         .on_menu_event(move |app_handle: &AppHandle<R>, event| {
             handle_menu_event(app_handle, event.id.as_ref());
@@ -65,37 +54,8 @@ pub fn create_tray<R: Runtime>(app: &AppHandle<R>, hotkey_display: &str) -> Resu
 
 /// 处理托盘菜单事件
 fn handle_menu_event<R: tauri::Runtime>(app: &AppHandle<R>, event_id: &str) {
-    info!("托盘菜单事件: {}", event_id);
-
-    match event_id {
-        "start_dictation" => {
-            info!("触发开始听写");
-            // 发射热键事件，由前端或后端监听
-            if let Err(e) = app.emit("hotkey_pressed", ()) {
-                log::error!("发送热键事件失败: {}", e);
-            }
-        }
-        "settings" => {
-            info!("打开设置");
-            // 显示设置窗口
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.show();
-                let _ = window.set_focus();
-            }
-        }
-        "check_update" => {
-            info!("检查更新");
-            // 发送检查更新事件到前端
-            if let Err(e) = app.emit("check_update_requested", ()) {
-                log::error!("发送检查更新事件失败: {}", e);
-            }
-        }
-        "quit" => {
-            info!("退出应用");
-            app.exit(0);
-        }
-        _ => {
-            log::warn!("未知的菜单事件: {}", event_id);
-        }
+    if event_id == "quit" {
+        info!("退出应用");
+        app.exit(0);
     }
 }
