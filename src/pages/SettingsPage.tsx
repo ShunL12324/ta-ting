@@ -1,6 +1,5 @@
 import {
   Keyboard,
-  DownloadSimple,
   Check,
 } from '@phosphor-icons/react';
 import { useState, useEffect, useCallback } from 'react';
@@ -8,6 +7,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../stores/appStore';
 import { Button } from '../components/ui/button';
+import { ModelSelector } from '../components/ModelSelector';
 import { Switch } from '../components/ui/switch';
 import { Label } from '../components/ui/label';
 import { Separator } from '../components/ui/separator';
@@ -45,58 +45,6 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-type LangId = 'zh' | 'en' | 'auto';
-
-const LANG_IDS: LangId[] = ['zh', 'en', 'auto'];
-const LANG_BUNDLED: Record<LangId, boolean> = { zh: true, en: false, auto: true };
-
-function TranscriptionLangSelector() {
-  const { t } = useTranslation();
-  const [selected, setSelected] = useState<LangId>('zh');
-
-  return (
-    <div>
-      {LANG_IDS.map((id) => {
-        const isAvailable = LANG_BUNDLED[id];
-        const isSelected = selected === id;
-
-        return (
-          <div
-            key={id}
-            onClick={() => isAvailable && setSelected(id)}
-            className={`flex items-center justify-between px-2 py-2 rounded-md transition-colors ${
-              isAvailable ? 'cursor-pointer' : 'cursor-default opacity-50'
-            } ${isSelected ? 'bg-accent' : 'hover:bg-muted/60'}`}
-          >
-            <div>
-              <span className="text-sm font-medium text-foreground">
-                {t(`settings.transcriptionLang.languages.${id}.name`)}
-              </span>
-              <span className="ml-2 text-xs text-muted-foreground">
-                {t(`settings.transcriptionLang.languages.${id}.desc`)}
-              </span>
-            </div>
-            {isAvailable ? (
-              isSelected
-                ? <Check size={15} weight="bold" className="text-primary flex-shrink-0" />
-                : null
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => e.stopPropagation()}
-                className="h-auto py-0.5 px-2 text-xs text-muted-foreground"
-              >
-                <DownloadSimple size={12} />
-                {t('common.download')}
-              </Button>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 type UILang = 'zh' | 'en';
 
@@ -207,7 +155,7 @@ function HotkeyRecorder() {
 
   return (
     <div className="space-y-1">
-      <div className="flex items-center justify-between px-2 py-2 rounded-md hover:bg-muted/60 transition-colors">
+      <div className="flex items-center justify-between px-2 py-2 rounded-md">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {recording ? (
             <span className="text-xs text-primary font-medium animate-pulse flex items-center gap-1.5">
@@ -253,7 +201,7 @@ export function SettingsPage() {
 
       <section>
         <SectionLabel>{t('settings.transcriptionLang.title')}</SectionLabel>
-        <TranscriptionLangSelector />
+        <ModelSelector />
       </section>
 
       <Separator />

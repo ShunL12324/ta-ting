@@ -12,25 +12,17 @@ pub struct SherpaEngine {
 }
 
 impl SherpaEngine {
-    pub fn new<P: AsRef<Path>>(model_dir: P, punct_model: Option<&str>) -> Result<Self> {
+    /// `model_stem` is the shared filename stem, e.g. `"epoch-20-avg-1"`.
+    pub fn new<P: AsRef<Path>>(model_dir: P, model_stem: &str, punct_model: Option<&str>) -> Result<Self> {
         let model_dir = model_dir.as_ref();
 
-        info!("Loading Sherpa ASR model: {:?}", model_dir);
+        info!("Loading Sherpa ASR model: {:?} (stem={})", model_dir, model_stem);
 
         let config = ZipFormerConfig {
-            encoder: model_dir
-                .join("encoder-epoch-20-avg-1.onnx")
-                .to_string_lossy()
-                .to_string(),
-            decoder: model_dir
-                .join("decoder-epoch-20-avg-1.onnx")
-                .to_string_lossy()
-                .to_string(),
-            joiner: model_dir
-                .join("joiner-epoch-20-avg-1.onnx")
-                .to_string_lossy()
-                .to_string(),
-            tokens: model_dir.join("tokens.txt").to_string_lossy().to_string(),
+            encoder: model_dir.join(format!("encoder-{}.onnx", model_stem)).to_string_lossy().to_string(),
+            decoder: model_dir.join(format!("decoder-{}.onnx", model_stem)).to_string_lossy().to_string(),
+            joiner:  model_dir.join(format!("joiner-{}.onnx",  model_stem)).to_string_lossy().to_string(),
+            tokens:  model_dir.join("tokens.txt").to_string_lossy().to_string(),
             ..Default::default()
         };
 

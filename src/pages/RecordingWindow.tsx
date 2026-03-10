@@ -11,6 +11,22 @@ export function RecordingWindow() {
   const prevDataRef = useRef<number[]>(new Array(32).fill(0));
 
   useEffect(() => {
+    const win = getCurrentWebviewWindow();
+    win.setShadow(false);
+
+    // Listen for reset signal sent before each show() so state is fresh
+    let unlistenReset: (() => void) | null = null;
+    win.listen('recording_reset', () => {
+      setDuration(0);
+      const zeros = new Array(32).fill(0);
+      setWaveformData(zeros);
+      prevDataRef.current = zeros;
+    }).then((fn) => { unlistenReset = fn; });
+
+    return () => { unlistenReset?.(); };
+  }, []);
+
+  useEffect(() => {
     const timer = setInterval(() => setDuration((p) => p + 1), 1000);
     const win = getCurrentWebviewWindow();
     let unlisten: (() => void) | null = null;

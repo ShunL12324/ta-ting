@@ -8,6 +8,13 @@ pub struct AppSettings {
     /// Hotkey in internal format, e.g. "Ctrl+Shift+KeyV"
     pub hotkey: String,
     pub auto_paste: bool,
+    /// Active ASR model ID (e.g. "sherpa-zh", "sherpa-en")
+    #[serde(default = "default_model")]
+    pub active_model: String,
+}
+
+fn default_model() -> String {
+    "sherpa-zh".to_string()
 }
 
 impl Default for AppSettings {
@@ -15,6 +22,7 @@ impl Default for AppSettings {
         Self {
             hotkey: "Ctrl+Shift+KeyV".to_string(),
             auto_paste: true,
+            active_model: default_model(),
         }
     }
 }

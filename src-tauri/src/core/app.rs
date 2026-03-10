@@ -16,6 +16,8 @@ use tauri::{AppHandle, Emitter, Manager};
 pub struct AppConfig {
     /// Sherpa ASR model directory path
     pub model_path: String,
+    /// Shared filename stem for encoder/decoder/joiner, e.g. "epoch-20-avg-1"
+    pub model_stem: String,
     /// Sherpa punctuation model .onnx path (empty = skip punctuation)
     pub punct_model_path: String,
     /// Recording sample rate
@@ -27,6 +29,7 @@ impl Default for AppConfig {
         Self {
             model_path: "resources/models/sherpa-zh/sherpa-onnx-zipformer-multi-zh-hans-2023-9-2"
                 .to_string(),
+            model_stem: "epoch-20-avg-1".to_string(),
             punct_model_path: String::new(),
             sample_rate: 16000,
         }
@@ -72,7 +75,7 @@ impl TaTingApp {
         } else {
             Some(self.config.punct_model_path.as_str())
         };
-        let sherpa = SherpaEngine::new(&self.config.model_path, punct_path)
+        let sherpa = SherpaEngine::new(&self.config.model_path, &self.config.model_stem, punct_path)
             .context("Failed to load Sherpa model")?;
         *self.sherpa.lock().unwrap() = Some(sherpa);
         info!("✅ Sherpa 引擎初始化完成");
@@ -88,6 +91,21 @@ impl TaTingApp {
         info!("✅ 输入模拟器初始化完成");
 
         info!("🎉 所有组件初始化完成");
+        Ok(())
+    }
+
+    /// Hot-swap the ASR model without restarting the app.
+    pub fn switch_model(&self, model_path: &str, model_stem: &str) -> Result<()> {
+        info!("Switching ASR model to: {} (stem={})", model_path, model_stem);
+        let punct_path = if self.config.punct_model_path.is_empty() {
+            None
+        } else {
+            Some(self.config.punct_model_path.as_str())
+        };
+        let new_engine = SherpaEngine::new(model_path, model_stem, punct_path)
+            .context("Failed to load new Sherpa model")?;
+        *self.sherpa.lock().unwrap() = Some(new_engine);
+        info!("✅ ASR model switched");
         Ok(())
     }
 
@@ -135,8 +153,8 @@ impl TaTingApp {
         if let Some(ref h) = handle {
             h.emit("state_changed", "recording")
                 .map_err(|e| anyhow::anyhow!("发送事件失败: {}", e))?;
-            crate::create_recording_window(h)
-                .map_err(|e| anyhow::anyhow!("创建录音窗口失败: {}", e))?;
+            crate::show_recording_window(h)
+                .map_err(|e| anyhow::anyhow!("显示录音窗口失败: {}", e))?;
         }
 
         let mut recorder_lock = self.recorder.lock().unwrap();

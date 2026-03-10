@@ -5,13 +5,14 @@ pub mod core;
 pub mod system;
 pub mod asr;
 pub mod punctuation;
+pub mod model_manager;
 
 use config::settings::AppSettings;
 use core::app::{AppConfig, TaTingApp};
 use global_hotkey::GlobalHotKeyEvent;
 use log::{error, info};
 use std::sync::{Arc, Mutex, OnceLock};
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 // ==================== 全局状态 ====================
 
@@ -99,20 +100,73 @@ async fn check_for_updates(app: AppHandle) -> Result<String, String> {
     }
 }
 
+// ==================== Model management commands ====================
+
+#[tauri::command]
+fn get_available_models(app: AppHandle) -> Vec<model_manager::ModelInfo> {
+    model_manager::list_models(&app)
+}
+
+#[tauri::command]
+async fn download_model(model_id: String, app: AppHandle) -> Result<(), String> {
+    tokio::spawn(async move {
+        if let Err(e) = model_manager::start_download(model_id.clone(), app.clone()).await {
+            error!("Model download failed for {}: {}", model_id, e);
+            let _ = app.emit("model_download_error", format!("{}: {}", model_id, e));
+        }
+    });
+    Ok(())
+}
+
+#[tauri::command]
+fn cancel_model_download(model_id: String) {
+    model_manager::cancel_download(&model_id);
+}
+
+#[tauri::command]
+fn delete_model(model_id: String, app: AppHandle) -> Result<(), String> {
+    model_manager::delete_model(&app, &model_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn get_active_model(app: AppHandle) -> String {
+    let path = settings_path(&app);
+    AppSettings::load_from_file(&path)
+        .unwrap_or_default()
+        .active_model
+}
+
+#[tauri::command]
+fn set_active_model(model_id: String, app: AppHandle, state: State<AppState>) -> Result<(), String> {
+    // 1. Resolve model path + stem
+    let (model_dir, model_stem) = model_manager::model_path(&app, &model_id)
+        .ok_or_else(|| format!("Model '{}' is not installed", model_id))?;
+
+    // 2. Hot-swap the ASR engine
+    state.app.lock().unwrap()
+        .switch_model(&model_dir.to_string_lossy(), model_stem)
+        .map_err(|e| e.to_string())?;
+
+    // 3. Persist
+    let settings_file = settings_path(&app);
+    let mut settings = AppSettings::load_from_file(&settings_file).unwrap_or_default();
+    settings.active_model = model_id;
+    settings.save_to_file(&settings_file).map_err(|e| e.to_string())
+}
+
 // ==================== 录音窗口管理 ====================
 
 use tauri::{WebviewUrl, WebviewWindow, WebviewWindowBuilder, window::Color};
 
+/// Called once at startup — creates the window hidden so WebView2 is pre-warmed.
 pub fn create_recording_window<R: tauri::Runtime>(
     app_handle: &AppHandle<R>,
 ) -> Result<WebviewWindow<R>, String> {
-    info!("创建录音窗口");
+    info!("预创建录音窗口 (hidden)");
 
     let (x, y) = if let Ok(Some(monitor)) = app_handle.primary_monitor() {
         let screen = monitor.size();
-        let window_width = 280;
-        let window_height = 44;
-        let x = (screen.width as i32 - window_width) / 2;
+        let x = (screen.width as i32 - 280) / 2;
         let y = (screen.height as f32 * 0.82) as i32;
         (x as f64, y as f64)
     } else {
@@ -133,17 +187,27 @@ pub fn create_recording_window<R: tauri::Runtime>(
     .resizable(false)
     .transparent(true)
     .background_color(Color(0, 0, 0, 0))
-    .visible(true)
+    .shadow(false)
+    .visible(false)
     .build()
     .map_err(|e| e.to_string())?;
 
     Ok(window)
 }
 
+/// Show the pre-warmed window and tell React to reset its state.
+pub fn show_recording_window<R: tauri::Runtime>(app_handle: &AppHandle<R>) -> Result<(), String> {
+    if let Some(window) = app_handle.get_webview_window("recording") {
+        let _ = window.emit("recording_reset", ());
+        window.show().map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// Hide (not close) the window so it stays pre-warmed for next use.
 pub fn close_recording_window<R: tauri::Runtime>(app_handle: &AppHandle<R>) {
     if let Some(window) = app_handle.get_webview_window("recording") {
-        info!("关闭录音窗口");
-        let _ = window.close();
+        let _ = window.hide();
     }
 }
 
@@ -210,16 +274,10 @@ pub fn run() {
             let settings = AppSettings::load_from_file(&settings_file).unwrap_or_default();
             info!("已加载设置: 热键={}", settings.hotkey);
 
-            // 2. Init TaTing app
-            let model_path = app
-                .path()
-                .resolve(
-                    "resources/models/sherpa-zh/sherpa-onnx-zipformer-multi-zh-hans-2023-9-2",
-                    tauri::path::BaseDirectory::Resource,
-                )
-                .map_err(|e| format!("无法解析模型路径: {}", e))?
-                .to_string_lossy()
-                .into_owned();
+            // 2. Init TaTing app — resolve model path from active_model setting
+            let (model_dir, model_stem) = model_manager::model_path(app.handle(), &settings.active_model)
+                .ok_or_else(|| format!("Active model '{}' not found; ensure it is downloaded", settings.active_model))?;
+            let model_path = model_dir.to_string_lossy().into_owned();
 
             let punct_model_path = app
                 .path()
@@ -232,6 +290,7 @@ pub fn run() {
 
             let config = AppConfig {
                 model_path,
+                model_stem: model_stem.to_string(),
                 punct_model_path,
                 ..AppConfig::default()
             };
@@ -259,6 +318,10 @@ pub fn run() {
             // 6. Register app state
             app.manage(AppState { app: app_state });
 
+            // 7. Pre-warm recording window (hidden) to eliminate hotkey→show latency
+            create_recording_window(app.handle())
+                .map_err(|e| format!("预创建录音窗口失败: {}", e))?;
+
             info!("🎉 应用初始化完成");
             Ok(())
         })
@@ -268,6 +331,12 @@ pub fn run() {
             get_settings,
             set_hotkey,
             check_for_updates,
+            get_available_models,
+            download_model,
+            cancel_model_download,
+            delete_model,
+            get_active_model,
+            set_active_model,
         ])
         .run(tauri::generate_context!())
         .expect("运行 Tauri 应用时出错");
